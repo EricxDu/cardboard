@@ -31,35 +31,43 @@ def main():
         filename = sys.argv[1]
         splitted = filename.split(".")
         if "deck" in splitted and "m3u" in splitted:
+            print("Constructing a deck from " + filename)
             list = cardboard.get_deck_from_list(filename)
             make_folder("DECK", list)
         elif os.path.isdir(filename):
             if filename.find("DECK") >= 0:
+                print("Drawing cards from " + filename)
                 list = cardboard.get_hand(filename)
                 make_folder("HAND", list)
             else:
+                print("Grabbing a booster from " + filename)
                 list = cardboard.get_draft(filename)
                 make_folder("DRAFT", list)
     else:
         print("Please provide an m3u file or a folder containing card images")
-        print("I will create a deck for you from a .deck.m3u file")
+        print("I will create a DECK for you from a .deck.m3u file")
         print("I will move cards from a DECK folder to your HAND")
-        print("I will copy a draft of cards from any other folder")
+        print("I will copy cards from a set folder to create a DRAFT")
 
-def make_folder(prefix, list):
+def make_folder(folder, list):
     isotime = datetime.datetime.now().replace(microsecond=0).isoformat()
-    folder = prefix + "".join(re.split("-|T|:", isotime))
-    os.mkdir(os.path.join(os.getcwd(), folder))
+    stamp = "".join(re.split("-|T|:", isotime))
+    if folder == "DECK" or folder == "DRAFT":
+        folder = folder + stamp
+        print("creating " + folder)
+    else:
+        print("moving " + str(len(list)) + " cards to " + folder)
+    if not os.path.isdir(os.path.join(os.getcwd(), folder)):
+        os.mkdir(os.path.join(os.getcwd(), folder))
     for i, path in enumerate(list):
         splitted = os.path.split(path)
         filename = splitted[len(splitted)-1]
-        if prefix == "HAND":
+        if folder == "HAND":
             shutil.move(path, os.path.join(folder, filename))
         else:
             name, ext = filename.rsplit(".", 1)
             filename = name + " (" + str(i+1) + ")" + "." + ext
             shutil.copy(path, os.path.join(folder, filename))
-    print("Created " + folder)
 
 def make_list(filename, list):
     f = open(filename, "w")
@@ -101,7 +109,9 @@ class Cardboard():
         set_list = self.get_list(filepath)
         draft_list = []
         for i in range(many):
-            draft_list.append(random.choice(set_list))
+            if len(set_list) > 0:
+                card = set_list.pop(random.randrange(len(set_list)))
+                draft_list.append(card)
         return draft_list
 
     def get_list(self, path, ext="gif png"):
